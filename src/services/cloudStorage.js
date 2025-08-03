@@ -161,12 +161,11 @@ class CloudStorageService {
         
         console.log(`✅ ImgBB upload successful: ${imgbbData.url}`);
         
-        // Return both original and proxy URLs
+        // Return upload data
         return {
           original_url: imgbbData.url,
-          proxy_url: `${this.baseUrl}/api/logos/proxy/${imgbbData.id}`,
           imgbb_id: imgbbData.id,
-          imgbb_full_url: imgbbData.url, // Store full URL for proxy retrieval
+          imgbb_full_url: imgbbData.url, // Store full URL for direct access
           delete_url: imgbbData.delete_url,
           size: imgbbData.size,
           width: imgbbData.width,
@@ -206,7 +205,7 @@ class CloudStorageService {
     }
   }
 
-  // Get image from ImgBB (for proxy)
+  // Get image from ImgBB (for direct access)
   async getImageFromImgBB(imgbbIdOrUrl) {
     try {
       // If it's a full URL, use it directly, otherwise construct from ID
@@ -234,11 +233,6 @@ class CloudStorageService {
       console.error('ImgBB fetch error:', error.message);
       throw new Error(`Failed to fetch image from ImgBB: ${error.message}`);
     }
-  }
-
-  // Generate proxy URL for hiding ImgBB URLs
-  generateProxyUrl(imgbbId) {
-    return `${this.baseUrl}/api/logos/proxy/${imgbbId}`;
   }
 
   // Alternative: Upload to multiple services for redundancy
@@ -304,12 +298,10 @@ class CloudStorageService {
       provider: 'ImgBB',
       features: {
         upload: !!this.imgbbApiKey,
-        proxy: true,
         delete: true,
         maxSize: '32MB',
         freeLimit: 'Unlimited (with API key)',
       },
-      proxyEnabled: true,
       baseUrl: this.baseUrl,
     };
   }

@@ -123,16 +123,16 @@ router.get('/auto/:domain', async (req, res) => {
         });
 
         return res.send(imageData.buffer);
-      } catch (proxyError) {
-        console.error('Proxy error:', proxyError);
-        // Fall back to Clearbit if proxy fails
+      } catch (imageError) {
+        console.error('Image retrieval error:', imageError);
+        // Fall back to Clearbit if image retrieval fails
         if (fallback === 'true') {
           return res.redirect(`https://logo.clearbit.com/${normalizedDomain}?size=${size}&fallback=default`);
         }
       }
     }
     
-    // Fallback if no imgbb_id or proxy failed
+    // Fallback if no imgbb_id or image retrieval failed
     if (fallback === 'true') {
       return res.redirect(`https://logo.clearbit.com/${normalizedDomain}?size=${size}&fallback=default`);
     }
@@ -141,39 +141,6 @@ router.get('/auto/:domain', async (req, res) => {
 
   } catch (error) {
     console.error('Auto-logo error:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-
-
-// GET /api/logos/proxy/:imgbbId - Serve image from ImgBB (proxy route)
-router.get('/proxy/:imgbbId', async (req, res) => {
-  try {
-    const { imgbbId } = req.params;
-    
-    if (!imgbbId) {
-      return res.status(400).send('ImgBB ID required');
-    }
-
-    try {
-      const imageData = await cloudStorage.getImageFromImgBB(imgbbId);
-      
-      res.set({
-        'Content-Type': imageData.contentType,
-        'Content-Length': imageData.size,
-        'Cache-Control': 'public, max-age=86400', 
-        'X-Logo-API': 'company-logo-api'
-      });
-
-      return res.send(imageData.buffer);
-    } catch (proxyError) {
-      console.error('Proxy error for ID:', imgbbId, proxyError);
-      return res.status(404).send('Image not found');
-    }
-
-  } catch (error) {
-    console.error('Proxy route error:', error);
     res.status(500).send('Server error');
   }
 });

@@ -4,9 +4,8 @@ class Company {
     this.name = data.name || '';
     this.domain = data.domain || '';
     this.logo_url = data.logo_url || null;
-    this.proxy_url = data.proxy_url || null;
     this.imgbb_id = data.imgbb_id || null;
-    this.imgbb_url = data.imgbb_url || null; // Full ImgBB URL for proxy retrieval
+    this.imgbb_url = data.imgbb_url || null; // Full ImgBB URL for direct access
     this.imgbb_delete_url = data.imgbb_delete_url || null;
     this.logo_data = data.logo_data || null; // For local storage fallback
     this.logo_format = data.logo_format || null;
@@ -82,7 +81,7 @@ class Company {
       id: this.id,
       name: this.name,
       domain: this.domain,
-      logo_url: this.proxy_url || this.logo_url, // Prefer proxy URL
+      logo_url: this.logo_url,
       original_url: this.logo_url,
       logo_format: this.logo_format,
       logo_size: this.logo_size,
@@ -138,12 +137,12 @@ class Company {
 
   // Check if company has a valid logo
   hasLogo() {
-    return !!(this.proxy_url || this.logo_url || this.logo_data);
+    return !!(this.logo_url || this.logo_data);
   }
 
-  // Get the best logo URL (proxy preferred)
+  // Get the best logo URL
   getBestLogoUrl() {
-    return this.proxy_url || this.logo_url;
+    return this.logo_url;
   }
 
   // Check if using cloud storage

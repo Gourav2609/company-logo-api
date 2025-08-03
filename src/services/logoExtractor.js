@@ -33,7 +33,6 @@ class LogoExtractor {
           
           // Set cloud storage data
           company.logo_url = cloudUpload.original_url;
-          company.proxy_url = cloudUpload.proxy_url;
           company.imgbb_id = cloudUpload.imgbb_id;
           company.imgbb_url = cloudUpload.imgbb_full_url || cloudUpload.original_url;
           company.imgbb_delete_url = cloudUpload.delete_url;
@@ -42,7 +41,7 @@ class LogoExtractor {
           company.logo_width = cloudUpload.width;
           company.logo_height = cloudUpload.height;
           
-          console.log(`☁️  Logo uploaded to cloud: ${cloudUpload.proxy_url}`);
+          console.log(`☁️  Logo uploaded to cloud: ${cloudUpload.imgbb_url}`);
         } catch (uploadError) {
           console.warn('Cloud upload failed, using local storage:', uploadError.message);
           

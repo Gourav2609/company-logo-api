@@ -98,7 +98,6 @@ class CloudDatabaseService {
         imgbb_id VARCHAR(255),
         imgbb_url TEXT,
         imgbb_delete_url TEXT,
-        proxy_url TEXT,
         logo_format VARCHAR(50),
         logo_size INTEGER,
         logo_width INTEGER,
@@ -149,8 +148,8 @@ class CloudDatabaseService {
     }
 
     const query = `
-      INSERT INTO companies (name, domain, logo_url, imgbb_id, imgbb_url, imgbb_delete_url, proxy_url, logo_format, logo_size, logo_width, logo_height)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO companies (name, domain, logo_url, imgbb_id, imgbb_url, imgbb_delete_url, logo_format, logo_size, logo_width, logo_height)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
     
@@ -161,7 +160,6 @@ class CloudDatabaseService {
       companyData.imgbb_id,
       companyData.imgbb_url,
       companyData.imgbb_delete_url,
-      companyData.proxy_url,
       companyData.logo_format,
       companyData.logo_size,
       companyData.logo_width,
