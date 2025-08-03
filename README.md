@@ -1,21 +1,46 @@
 # Company Logo API 🏢✨
 
-A fast, reliable REST API for extracting and serving company logos with cloud storage and format conversion.
+A fast, reliable REST API for extracting and serving company logos with cloud storage and format conversion. **Perfect for blogs and websites** that need company logos on-demand.
 
-## Features 🚀
+## ✨ Features
 
-- **Logo Extraction**: Automatic logo detection from websites
-- **Format Conversion**: ICO → PNG conversion using `icojs`
-- **Cloud Storage**: ImgBB integration for unlimited image storage
-- **Database**: Neon PostgreSQL for fast, reliable data storage
-- **Proxy URLs**: Hide third-party storage URLs behind your API
-- **Multiple Sources**: Clearbit, favicons, social media fallbacks
+- **🚀 Auto-extraction**: Logos extracted automatically on first request
+- **🔄 ICO → PNG conversion**: Handles ICO files with `icojs` package  
+- **☁️ Cloud storage**: ImgBB integration for unlimited image storage
+- **🐘 Cloud database**: Neon PostgreSQL for fast, reliable data storage
+- **🔗 Direct image URLs**: Perfect for `<img>` tags and Markdown
+- **🛡️ Smart fallback**: Uses Clearbit if extraction fails
+- **⚡ Cached**: Fast subsequent requests from database
 
-## Quick Start 🏃‍♂️
+## 🎯 Blog-Friendly Usage
 
-### 1. Clone and Install
+### Simple HTML (Just works!)
+```html
+<img src="https://company-logo-api-production.up.railway.app/api/logos/auto/github.com" alt="GitHub logo">
+<img src="https://company-logo-api-production.up.railway.app/api/logos/auto/google.com" alt="Google logo">
+<img src="https://company-logo-api-production.up.railway.app/api/logos/auto/openai.com" alt="OpenAI logo">
+```
+
+### Markdown Ready
+```markdown
+![GitHub logo](https://company-logo-api-production.up.railway.app/api/logos/auto/github.com)
+![Google logo](https://company-logo-api-production.up.railway.app/api/logos/auto/google.com)
+```
+
+### With Options
+```html
+<!-- With fallback (recommended) -->
+<img src="https://company-logo-api-production.up.railway.app/api/logos/auto/github.com?fallback=true" alt="GitHub">
+
+<!-- Custom size -->
+<img src="https://company-logo-api-production.up.railway.app/api/logos/auto/github.com?size=128" alt="GitHub">
+```
+
+## 🚀 Quick Setup
+
+### 1. Clone & Install
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Gourav2609/company-logo-api.git
 cd company-logo-api
 npm install
 ```
@@ -26,115 +51,137 @@ cp .env.example .env
 # Edit .env with your credentials
 ```
 
-Required environment variables:
-- `NEON_DATABASE_URL`: Your Neon PostgreSQL database URL
-- `IMGBB_API_KEY`: Your ImgBB API key (free at imgbb.com)
+**Required Environment Variables:**
+```env
+# Neon Database (3GB free tier)
+NEON_DATABASE_URL=postgresql://user:pass@host.neon.tech/db
 
-### 3. Deploy
+# ImgBB API (unlimited free tier)
+IMGBB_API_KEY=your_imgbb_api_key
+```
+
+### 3. Start Server
 ```bash
 npm start
+# Server runs on http://localhost:3000
 ```
 
-## API Endpoints 📡
+## 📡 API Endpoints
 
-### Extract Logo
-```http
-POST /api/logos/extract
-Content-Type: application/json
+| Endpoint | Method | Description | Perfect For |
+|----------|--------|-------------|-------------|
+| `/api/logos` | GET | Get all companies | Admin dashboard |
+| `/api/logos/auto/:domain` | GET | **Auto-extract logo image** | `<img>` tags |
+| `/api/logos/:id` | DELETE | Delete company logo | Admin cleanup |
 
-{
-  "domain": "github.com"
-}
+### Main Endpoint: `/api/logos/auto/:domain`
+- **Auto-extracts** if logo not cached
+- **Returns image data** directly (works in `<img>` tags)
+- **Smart fallback** to Clearbit if extraction fails
+- **Cached** for fast subsequent requests
+
+## 📋 Response Examples
+
+### Auto Logo Endpoint
+```bash
+GET /api/logos/auto/github.com
+# Returns: PNG image data (ready for <img> tags)
 ```
 
-### Get All Logos
-```http
+### All Companies
+```bash
 GET /api/logos
 ```
-
-### Get Specific Logo
-```http
-GET /api/logos/:id
-```
-
-### Proxy Image (Hidden URLs)
-```http
-GET /api/logos/proxy/:imgbb_id
-```
-
-### Health Check
-```http
-GET /health
-```
-
-## Response Format 📋
-
 ```json
 {
-  "message": "Logo extracted successfully",
-  "data": {
-    "id": 1,
-    "name": "GitHub",
-    "domain": "github.com",
-    "logo_url": "http://your-api.com/api/logos/proxy/abc123",
-    "original_url": "https://i.ibb.co/xyz/github-logo.png",
-    "logo_format": "ico",
-    "logo_size": 869,
-    "logo_width": 32,
-    "logo_height": 32,
-    "cloud_storage": {
-      "enabled": true,
-      "provider": "ImgBB"
+  "data": [
+    {
+      "id": 1,
+      "name": "GitHub",
+      "domain": "github.com",
+      "logo_url": "https://company-logo-api-production.up.railway.app/api/logos/auto/github.com",
+      "logo_format": "ico",
+      "logo_size": 869,
+      "cloud_storage": {
+        "enabled": true,
+        "provider": "ImgBB"
+      }
     }
-  }
+  ]
 }
 ```
 
-## Tech Stack 🔧
+## 🔧 Tech Stack
 
-- **Runtime**: Node.js
+- **Runtime**: Node.js 14+
 - **Framework**: Express.js
-- **Database**: Neon PostgreSQL
-- **Storage**: ImgBB Cloud Storage
+- **Database**: Neon PostgreSQL (3GB free)
+- **Storage**: ImgBB (unlimited free)
 - **Image Processing**: Sharp + icojs
 - **Deployment**: Railway/Render/Vercel ready
 
-## Free Services Used 💰
+## 🌐 Free Hosting Options
 
-- **Neon**: 3GB PostgreSQL database (free tier)
-- **ImgBB**: Unlimited image storage with API key (free)
-- **Railway/Render**: API hosting (free tier available)
+### 🚂 Railway (Recommended)
+**Step-by-step deployment:**
 
-## Deployment Platforms 🌐
+1. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Deploy company logo API"
+   git push origin main
+   ```
 
-### Recommended: Railway (Free Tier)
-1. Connect your GitHub repo
-2. Set environment variables
-3. Deploy automatically
+2. **Deploy to Railway:**
+   - Go to [railway.app](https://railway.app)
+   - Click "Deploy from GitHub"
+   - Select your `company-logo-api` repository
+   - Railway will auto-detect Node.js and deploy
 
-### Alternative: Render (Free Tier)
-1. Connect your GitHub repo  
-2. Set environment variables
-3. Deploy with zero config
+3. **Add Environment Variables:**
+   - In Railway dashboard → Variables tab
+   - Add these variables:
+   ```env
+   NEON_DATABASE_URL=your_neon_database_url
+   IMGBB_API_KEY=your_imgbb_api_key
+   NODE_ENV=production
+   ```
 
-### Alternative: Vercel (Serverless)
-1. Install Vercel CLI
-2. Configure `vercel.json`
-3. Deploy with `vercel`
+4. **Get your Railway URL:**
+   - After deployment, Railway provides a URL like:
+   - `https://company-logo-api-production.up.railway.app`
 
-## Environment Variables 🔐
+5. **Test your API:**
+   ```bash
+   curl https://your-app.up.railway.app/api/logos/auto/github.com
+   ```
+
+### 🎨 Render
+```bash
+# 1. Connect GitHub repo
+# 2. Runtime: Node.js
+# 3. Build: npm install
+# 4. Start: npm start
+```
+
+### ⚡ Vercel (Serverless)
+```bash
+npm i -g vercel
+vercel
+# Follow prompts
+```
+
+## 🔐 Environment Variables
 
 ```env
 # Server
 PORT=3000
 NODE_ENV=production
-BASE_URL=https://your-api-domain.com
 
-# Database
-DB_TYPE=neon
-NEON_DATABASE_URL=postgresql://user:password@host/db
+# Database (Required)
+NEON_DATABASE_URL=postgresql://user:pass@host.neon.tech/db
 
-# Storage
+# Storage (Required)  
 IMGBB_API_KEY=your_imgbb_api_key
 
 # Optional
@@ -142,10 +189,38 @@ CORS_ORIGIN=*
 LOG_LEVEL=info
 ```
 
-## License 📄
+## 🎯 Perfect For
 
-MIT License - feel free to use this in your projects!
+- **📝 Blog websites** - Add company logos easily
+- **📰 News sites** - Company logos in articles  
+- **💼 Business directories** - Auto-populate company info
+- **🔗 Link previews** - Rich social media previews
+- **📊 Dashboards** - Company logo widgets
+
+## 🚀 Getting Started (Production)
+
+1. **Get free accounts:**
+   - [Neon](https://neon.tech) - PostgreSQL database
+   - [ImgBB](https://imgbb.com) - Image storage
+   - [Railway](https://railway.app) - Hosting
+
+2. **Deploy in 5 minutes:**
+   - Fork this repo
+   - Connect to Railway
+   - Add environment variables
+   - Deploy!
+
+3. **Use in your blog:**
+   ```html
+   <img src="https://your-app.up.railway.app/api/logos/auto/github.com" alt="GitHub">
+   ```
+
+## 📄 License
+
+MIT License - Free for personal and commercial use!
 
 ---
 
-Made with ❤️ for developers who need reliable logo APIs
+**Made with ❤️ for developers who need reliable logo APIs**
+
+🔗 **Live Demo**: `https://your-app.up.railway.app/api/logos/auto/github.com`

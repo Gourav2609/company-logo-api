@@ -5,9 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "migrate": "node src/database/migrate.js",
-    "cli": "node scripts/cli.js"
+    "dev": "nodemon src/server.js"
   },
   "keywords": [
     "api",
@@ -21,7 +19,6 @@
   "dependencies": {
     "axios": "^1.4.0",
     "cheerio": "^1.0.0-rc.12",
-    "commander": "^14.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
@@ -30,8 +27,7 @@
     "icojs": "^0.19.5",
     "morgan": "^1.10.0",
     "pg": "^8.16.3",
-    "sharp": "^0.32.4",
-    "sqlite3": "^5.1.6"
+    "sharp": "^0.32.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

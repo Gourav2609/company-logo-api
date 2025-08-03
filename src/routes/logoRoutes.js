@@ -47,242 +47,15 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/logos/extract - Extract logo for a domain
-router.post('/extract', async (req, res) => {
-  try {
-    const db = await initCloudDb();
-    const { domain, name, force = false } = req.body;
 
-    if (!domain) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Domain is required'
-      });
-    }
-
-    const normalizedDomain = Company.normalizeDomain(domain);
-    
-    // Check if company already exists
-    const existingCompany = await cloudDb.findByDomain(normalizedDomain);
-    
-    if (existingCompany && !force) {
-      const company = new Company(existingCompany);
-      return res.json({
-        message: 'Logo already exists for this domain',
-        data: company.toJSON(),
-        cached: true
-      });
-    }
-
-    // Extract logo
-    console.log(`🔍 Extracting logo for: ${normalizedDomain}`);
-    const company = await logoExtractor.extractLogo(normalizedDomain, name);
-    
-    let savedCompany;
-    if (existingCompany) {
-      // Update existing company
-      const updateData = {
-        logo_url: company.logo_url,
-        proxy_url: company.proxy_url,
-        imgbb_id: company.imgbb_id,
-        imgbb_delete_url: company.imgbb_delete_url,
-        logo_format: company.logo_format,
-        logo_size: company.logo_size,
-        logo_width: company.logo_width,
-        logo_height: company.logo_height
-      };
-      
-      savedCompany = await cloudDb.updateCompany(existingCompany.id, updateData);
-      await cloudDb.logAttempt(existingCompany.id, company.logo_url, true);
-    } else {
-      // Create new company
-      savedCompany = await cloudDb.createCompany(company);
-      await cloudDb.logAttempt(savedCompany.id, company.logo_url, true);
-    }
-
-    const responseCompany = new Company(savedCompany);
-    
-    res.status(201).json({
-      message: 'Logo extracted successfully',
-      data: responseCompany.toJSON(),
-      cached: false
-    });
-
-  } catch (error) {
-    console.error('Logo extraction error:', error);
-    
-    // Log failed attempt if we have company info
-    try {
-      const normalizedDomain = Company.normalizeDomain(req.body.domain);
-      const existingCompany = await cloudDb.findByDomain(normalizedDomain);
-      if (existingCompany) {
-        await cloudDb.logAttempt(existingCompany.id, req.body.domain, false, error.message);
-      }
-    } catch (logError) {
-      console.error('Failed to log attempt:', logError);
-    }
-
-    res.status(422).json({
-      error: 'Extraction Failed',
-      message: error.message || 'Failed to extract logo for the provided domain'
-    });
-  }
-});
-
-// GET /api/logos/proxy/:imgbbId - Proxy endpoint to hide ImgBB URLs
-router.get('/proxy/:imgbbId', async (req, res) => {
-  try {
-    const { imgbbId } = req.params;
-    
-    if (!imgbbId) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Image ID is required'
-      });
-    }
-
-    // First, try to find the company with this imgbb_id to get the stored URL
-    const database = await initCloudDb();
-    const companies = await database.getAllCompanies();
-    const company = companies.find(c => c.imgbb_id === imgbbId);
-    
-    let imgbbUrl = null;
-    if (company && company.imgbb_url) {
-      imgbbUrl = company.imgbb_url;
-    }
-
-    // Get image from ImgBB through proxy (pass URL if we have it)
-    const imageData = await cloudStorage.getImageFromImgBB(imgbbUrl || imgbbId);
-    
-    // Set appropriate headers
-    res.set({
-      'Content-Type': imageData.contentType,
-      'Content-Length': imageData.size,
-      'Cache-Control': 'public, max-age=86400', // Cache for 24 hours
-      'X-Proxy': 'company-logo-api'
-    });
-
-    res.send(imageData.buffer);
-
-  } catch (error) {
-    console.error('Proxy error:', error);
-    res.status(404).json({
-      error: 'Not Found',
-      message: 'Image not found or unavailable'
-    });
-  }
-});
-
-// GET /api/logos/:id - Get specific company logo
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { format } = req.query;
-
-    const companyData = await cloudDb.findById(id);
-    
-    if (!companyData) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'Company not found'
-      });
-    }
-
-    const company = new Company(companyData);
-    
-    res.json({
-      data: company.toJSON(format === 'full')
-    });
-
-  } catch (error) {
-    console.error('Error fetching company:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch company'
-    });
-  }
-});
-
-// GET /api/logos/:id/image - Get logo image file
-router.get('/:id/image', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const companyData = await companyDb.findById(id);
-    
-    if (!companyData) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'Company not found'
-      });
-    }
-
-    const company = new Company(companyData);
-    
-    if (!company.logo_data) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'Logo image not found for this company'
-      });
-    }
-
-    // Set appropriate content type
-    const contentType = company.logo_format === 'svg' ? 'image/svg+xml' : `image/${company.logo_format}`;
-    
-    res.set({
-      'Content-Type': contentType,
-      'Content-Length': company.logo_size,
-      'Cache-Control': 'public, max-age=86400' // Cache for 24 hours
-    });
-
-    res.send(company.logo_data);
-
-  } catch (error) {
-    console.error('Error serving logo image:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to serve logo image'
-    });
-  }
-});
-
-// GET /api/logos/domain/:domain - Get company by domain
-router.get('/domain/:domain', async (req, res) => {
-  try {
-    const { domain } = req.params;
-    const { format } = req.query;
-    
-    const normalizedDomain = Company.normalizeDomain(domain);
-    const companyData = await companyDb.findByDomain(normalizedDomain);
-    
-    if (!companyData) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'Company not found for this domain'
-      });
-    }
-
-    const company = new Company(companyData);
-    
-    res.json({
-      data: company.toJSON(format === 'full')
-    });
-
-  } catch (error) {
-    console.error('Error fetching company by domain:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch company'
-    });
-  }
-});
 
 // DELETE /api/logos/:id - Delete company logo
 router.delete('/:id', async (req, res) => {
   try {
+    const db = await initCloudDb();
     const { id } = req.params;
     
-    const companyData = await companyDb.findById(id);
+    const companyData = await db.findById(id);
     
     if (!companyData) {
       return res.status(404).json({
@@ -291,7 +64,7 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    await companyDb.delete(id);
+    await db.delete(id);
     
     res.json({
       message: 'Company deleted successfully'
@@ -306,61 +79,98 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// GET /api/logos/:id/attempts - Get extraction attempts for a company
-router.get('/:id/attempts', async (req, res) => {
+// GET /api/logos/auto/:domain - Auto-extract or return logo (Blog-friendly)
+router.get('/auto/:domain', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { domain } = req.params;
+    const { size = '64', fallback = 'true' } = req.query;
     
-    const companyData = await companyDb.findById(id);
-    
-    if (!companyData) {
-      return res.status(404).json({
-        error: 'Not Found',
-        message: 'Company not found'
-      });
+    if (!domain) {
+      return res.status(400).send('Domain required');
     }
 
-    const attempts = await logoAttemptsDb.getByCompanyId(id);
+    const db = await initCloudDb();
+    const normalizedDomain = Company.normalizeDomain(domain);
+    let companyData = await db.findByDomain(normalizedDomain);
     
-    res.json({
-      data: attempts
-    });
+    if (!companyData) {
+      try {
+        // Auto-extract for blogs
+        console.log(`Auto-extracting logo for blog: ${normalizedDomain}`);
+        const company = await logoExtractor.extractLogo(normalizedDomain);
+        companyData = await db.createCompany(company);
+        await db.logAttempt(companyData.id, company.logo_url, true);
+      } catch (extractError) {
+        console.error('Auto-extraction failed:', extractError);
+        if (fallback === 'true') {
+          return res.redirect(`https://logo.clearbit.com/${normalizedDomain}?size=${size}&fallback=default`);
+        }
+        return res.status(404).send('Logo not found');
+      }
+    }
+
+    const company = new Company(companyData);
+    
+    if (company.imgbb_id) {
+      try {
+        const imageData = await cloudStorage.getImageFromImgBB(company.imgbb_url || company.imgbb_id);
+        
+        res.set({
+          'Content-Type': imageData.contentType,
+          'Content-Length': imageData.size,
+          'Cache-Control': 'public, max-age=86400', 
+          'X-Logo-API': 'company-logo-api'
+        });
+
+        return res.send(imageData.buffer);
+      } catch (proxyError) {
+        console.error('Proxy error:', proxyError);
+        // Fall back to Clearbit if proxy fails
+        if (fallback === 'true') {
+          return res.redirect(`https://logo.clearbit.com/${normalizedDomain}?size=${size}&fallback=default`);
+        }
+      }
+    }
+    
+    // Fallback if no imgbb_id or proxy failed
+    if (fallback === 'true') {
+      return res.redirect(`https://logo.clearbit.com/${normalizedDomain}?size=${size}&fallback=default`);
+    }
+    
+    res.status(404).send('Logo not available');
 
   } catch (error) {
-    console.error('Error fetching attempts:', error);
-    res.status(500).json({
-      error: 'Internal Server Error',
-      message: 'Failed to fetch extraction attempts'
-    });
+    console.error('Auto-logo error:', error);
+    res.status(500).send('Server error');
   }
 });
+
+
 
 // GET /api/logos - API documentation endpoint (when no other route matches)
 router.use('*', (req, res) => {
   res.json({
     name: 'Company Logo API',
     version: '1.0.0',
-    description: 'API for extracting and managing company logos',
+    description: 'Simple API for extracting and serving company logos - Perfect for Blogs',
     endpoints: {
       'GET /api/logos': 'Get all companies with logos',
-      'POST /api/logos/extract': 'Extract logo for a domain',
-      'GET /api/logos/:id': 'Get specific company logo',
-      'GET /api/logos/:id/image': 'Get logo image file',
-      'GET /api/logos/domain/:domain': 'Get company by domain',
-      'DELETE /api/logos/:id': 'Delete company logo',
-      'GET /api/logos/:id/attempts': 'Get extraction attempts for a company'
+      'GET /api/logos/auto/:domain': 'Auto-extract and return logo image (perfect for <img> tags)',
+      'DELETE /api/logos/:id': 'Delete company logo'
     },
-    examples: {
-      extract: {
-        method: 'POST',
-        url: '/api/logos/extract',
-        body: {
-          domain: 'example.com',
-          name: 'Example Company',
-          force: false
-        }
-      }
-    }
+    blog_usage: {
+      'Simple img tag': '<img src="/api/logos/auto/github.com" alt="GitHub logo">',
+      'With fallback': '<img src="/api/logos/auto/github.com?fallback=true" alt="GitHub logo">',
+      'Custom size': '<img src="/api/logos/auto/github.com?size=128" alt="GitHub logo">',
+      'Markdown': '![GitHub logo](/api/logos/auto/github.com)'
+    },
+    features: [
+      'Auto-extracts logos on first request',
+      'Returns actual image data for <img> tags',
+      'Fallback to Clearbit if extraction fails',
+      'Cached for fast subsequent requests',
+      'Supports ICO → PNG conversion'
+    ]
   });
 });
 
