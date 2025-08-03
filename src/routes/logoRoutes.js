@@ -147,6 +147,39 @@ router.get('/auto/:domain', async (req, res) => {
 
 
 
+// GET /api/logos/proxy/:imgbbId - Serve image from ImgBB (proxy route)
+router.get('/proxy/:imgbbId', async (req, res) => {
+  try {
+    const { imgbbId } = req.params;
+    
+    if (!imgbbId) {
+      return res.status(400).send('ImgBB ID required');
+    }
+
+    try {
+      const imageData = await cloudStorage.getImageFromImgBB(imgbbId);
+      
+      res.set({
+        'Content-Type': imageData.contentType,
+        'Content-Length': imageData.size,
+        'Cache-Control': 'public, max-age=86400', 
+        'X-Logo-API': 'company-logo-api'
+      });
+
+      return res.send(imageData.buffer);
+    } catch (proxyError) {
+      console.error('Proxy error for ID:', imgbbId, proxyError);
+      return res.status(404).send('Image not found');
+    }
+
+  } catch (error) {
+    console.error('Proxy route error:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+
+
 // GET /api/logos - API documentation endpoint (when no other route matches)
 router.use('*', (req, res) => {
   res.json({
