@@ -11,13 +11,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Database files
-/data/
-*.db
-*.sqlite
-
 # Logs
-logs/
 *.log
 
 # Runtime data
@@ -25,10 +19,6 @@ pids/
 *.pid
 *.seed
 *.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-.nyc_output/
 
 # OS generated files
 .DS_Store
@@ -50,10 +40,5 @@ Thumbs.db
 tmp/
 temp/
 
-# Build output
-dist/
-build/
-
-# Logo export directories
-logos/
-exported-logos/
+# Vercel
+.vercel
