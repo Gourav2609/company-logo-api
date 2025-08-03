@@ -63,14 +63,25 @@ class LogoExtractor {
     }
   }
 
-  // Try multiple methods to find and extract logo
+ 
   async tryMultipleExtractionMethods(domain) {
-    const methods = [
-      () => this.extractFromFavicon(domain),
-      () => this.extractFromWebpage(domain),
-      () => this.extractFromCommonPaths(domain),
-      () => this.extractFromThirdPartyServices(domain)
+    
+    const problematicDomains = [
+      'mastercard.com', 'visa.com', 'amex.com', 'americanexpress.com',
+      'jpmorgan.com', 'wellsfargo.com', 'bankofamerica.com',
+      'cloudflare.com', 'fastly.com'
     ];
+    
+    const methods = [
+      () => this.extractFromThirdPartyServices(domain), 
+      () => this.extractFromFavicon(domain),
+      () => this.extractFromCommonPaths(domain)
+    ];
+    
+   
+    if (!problematicDomains.some(pd => domain.includes(pd))) {
+      methods.splice(2, 0, () => this.extractFromWebpage(domain));
+    }
 
     for (const method of methods) {
       try {
@@ -92,7 +103,9 @@ class LogoExtractor {
   async extractFromFavicon(domain) {
     const faviconUrls = [
       `https://${domain}/favicon.ico`,
-      `https://www.${domain}/favicon.ico`
+      `https://www.${domain}/favicon.ico`,
+      `https://${domain}/apple-touch-icon.png`,
+      `https://${domain}/apple-touch-icon-precomposed.png`
     ];
 
     for (const url of faviconUrls) {
@@ -110,10 +123,27 @@ class LogoExtractor {
   // Extract logo from webpage by parsing HTML
   async extractFromWebpage(domain) {
     try {
+      // Better headers to avoid bot detection
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0'
+      };
+
       const response = await axios.get(`https://${domain}`, {
         timeout: this.timeout,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        headers,
+        maxRedirects: 5,
+        validateStatus: function (status) {
+          return status >= 200 && status < 400; // Accept redirects
         }
       });
 
@@ -129,17 +159,21 @@ class LogoExtractor {
         }
       }
     } catch (error) {
-      console.log(`Failed to fetch webpage for ${domain}:`, error.message);
+      if (error.response?.status === 403) {
+        console.log(` Access denied for ${domain} (403) - website blocks automated requests`);
+      } else if (error.response?.status === 503) {
+        console.log(` Service unavailable for ${domain} (503) - likely behind protection`);
+      } else {
+        console.log(`Failed to fetch webpage for ${domain}:`, error.message);
+      }
     }
 
     return null;
   }
 
-  // Find logo URLs in HTML
   findLogoUrlsInHtml($, domain) {
     const logoUrls = new Set();
 
-    // Look for common logo selectors
     const logoSelectors = [
       'img[alt*="logo" i]',
       'img[src*="logo" i]',
@@ -166,7 +200,6 @@ class LogoExtractor {
       });
     });
 
-    // Convert to array and sort by relevance
     return Array.from(logoUrls).sort((a, b) => {
       const scoreA = this.calculateLogoRelevanceScore(a);
       const scoreB = this.calculateLogoRelevanceScore(b);
@@ -174,31 +207,28 @@ class LogoExtractor {
     });
   }
 
-  // Calculate relevance score for logo URL
   calculateLogoRelevanceScore(url) {
     let score = 0;
     const urlLower = url.toLowerCase();
 
-    // Higher score for URLs containing "logo"
     if (urlLower.includes('logo')) score += 10;
     
-    // Prefer certain file formats
     if (urlLower.includes('.svg')) score += 8;
     if (urlLower.includes('.png')) score += 6;
     if (urlLower.includes('.jpg') || urlLower.includes('.jpeg')) score += 4;
     
-    // Prefer certain paths
+  
     if (urlLower.includes('/assets/')) score += 3;
     if (urlLower.includes('/images/')) score += 3;
     if (urlLower.includes('/static/')) score += 2;
     
-    // Penalize very small sizes in filename
+   
     if (urlLower.match(/\d+x\d+/) && urlLower.match(/(\d+)x\d+/)[1] < 50) score -= 5;
 
     return score;
   }
 
-  // Extract from common logo paths
+
   async extractFromCommonPaths(domain) {
     const commonPaths = Company.generateLogoUrls(domain);
 
@@ -214,12 +244,16 @@ class LogoExtractor {
     return null;
   }
 
-  // Extract from third-party services
+ 
   async extractFromThirdPartyServices(domain) {
     const services = [
       `https://logo.clearbit.com/${domain}`,
       `https://unavatar.io/${domain}`,
-      `https://logo.uplead.com/${domain}`
+      `https://logo.uplead.com/${domain}`,
+      `https://img.logo.dev/${domain}?token=pk_X-1ZO13GSgeOoUrIuJ6GMQ`, 
+      `https://api.brandfetch.io/v2/assets/${domain}`, 
+      `https://logo.devapi.ai/${domain}`, 
+      `https://favicongrabber.com/api/grab/${domain}` 
     ];
 
     for (const url of services) {
@@ -234,17 +268,38 @@ class LogoExtractor {
     return null;
   }
 
-  // Download and process image
-  async downloadAndProcessImage(url) {
-    try {
-      const response = await axios.get(url, {
-        responseType: 'arraybuffer',
-        timeout: this.timeout,
-        maxContentLength: this.maxFileSize,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+
+  async downloadAndProcessImage(url, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        
+        if (attempt > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
-      });
+
+        
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Sec-Fetch-Dest': 'image',
+          'Sec-Fetch-Mode': 'no-cors',
+          'Sec-Fetch-Site': 'cross-site',
+          'Referer': `https://${new URL(url).hostname}/`
+        };
+
+        const response = await axios.get(url, {
+          responseType: 'arraybuffer',
+          timeout: this.timeout,
+          maxContentLength: this.maxFileSize,
+          headers,
+          maxRedirects: 3,
+          validateStatus: function (status) {
+            return status === 200; 
+          }
+        });
 
       if (response.status !== 200) {
         throw new Error(`HTTP ${response.status}`);
@@ -252,27 +307,26 @@ class LogoExtractor {
 
       const buffer = Buffer.from(response.data);
       
-      // Skip if too small (likely not a real logo)
+   
       if (buffer.length < 100) {
         throw new Error('Image too small');
       }
 
-      // Process image with Sharp (for format detection and optimization)
+
       try {
         const image = sharp(buffer);
         const metadata = await image.metadata();
         
-        // Skip very small images
+      
         if (metadata.width < 16 || metadata.height < 16) {
           throw new Error('Image dimensions too small');
         }
 
-        // Convert to PNG if not SVG (for consistency)
+    
         let processedBuffer = buffer;
         let format = metadata.format;
 
         if (format !== 'svg') {
-          // Resize if too large, but maintain aspect ratio
           if (metadata.width > 512 || metadata.height > 512) {
             processedBuffer = await image
               .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
@@ -295,7 +349,6 @@ class LogoExtractor {
         };
 
       } catch (sharpError) {
-        // If Sharp fails, return original buffer (might be SVG or other format)
         return {
           url,
           buffer,
@@ -305,11 +358,17 @@ class LogoExtractor {
       }
 
     } catch (error) {
-      throw new Error(`Failed to download ${url}: ${error.message}`);
+      if (attempt === retries) {
+        throw new Error(`Failed to download ${url} after ${retries + 1} attempts: ${error.message}`);
+      }
+      console.log(`Attempt ${attempt + 1} failed for ${url}, retrying...`);
     }
+    }
+    
+    throw new Error(`Failed to download ${url} after all attempts`);
   }
 
-  // Utility methods
+
   resolveUrl(url, domain) {
     if (url.startsWith('http')) {
       return url;
