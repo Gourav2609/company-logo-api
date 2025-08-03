@@ -64,7 +64,7 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    await db.delete(id);
+    await db.deleteCompany(id);
     
     res.json({
       message: 'Company deleted successfully'
