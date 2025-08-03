@@ -9,7 +9,7 @@ class CloudDatabaseService {
 
   // Get database configuration based on environment
   getDbConfig() {
-    const dbType = process.env.DB_TYPE || 'sqlite'; // sqlite, postgres, mysql
+    const dbType = process.env.DB_TYPE || 'neon'; 
     
     switch (dbType.toLowerCase()) {
       case 'postgres':
@@ -48,6 +48,7 @@ class CloudDatabaseService {
         };
       
       case 'neon':
+      default:
         return {
           type: 'postgres',
           connectionString: process.env.NEON_DATABASE_URL,
@@ -58,26 +59,12 @@ class CloudDatabaseService {
             connectionTimeoutMillis: 2000,
           }
         };
-      
-      default:
-        return {
-          type: 'sqlite',
-          file: process.env.DB_PATH || './data/companies.db'
-        };
     }
   }
 
   // Initialize database connection
   async initialize() {
-    if (this.config.type === 'sqlite') {
-      // Keep existing SQLite functionality
-      const { initializeDatabase } = require('../database/database');
-      await initializeDatabase();
-      this.connected = true;
-      return;
-    }
-
-    // For PostgreSQL-based databases
+    // For PostgreSQL-based databases (Neon, Supabase, etc.)
     try {
       const connectionConfig = this.config.connectionString 
         ? { connectionString: this.config.connectionString, ...this.config.config }
@@ -96,7 +83,7 @@ class CloudDatabaseService {
       this.connected = true;
     } catch (error) {
       console.error('❌ Cloud database connection failed:', error.message);
-      throw error;
+      throw new Error(`Failed to initialize database: ${error.message}`);
     }
   }
 
