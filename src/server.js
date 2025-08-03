@@ -10,20 +10,20 @@ const CloudDatabaseService = require('./services/cloudDatabase');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize cloud database
+
 const cloudDb = new CloudDatabaseService();
 
-// Middleware
+
 app.use(helmet());
 app.use(cors());
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+
 app.use('/api/logos', logoRoutes);
 
-// Health check endpoint
+
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -36,7 +36,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 404 handler
+app.get('/' , (req, res)=>{
+  res.json({ 
+    message: 'Welcome to the Company Logo API',
+  });
+});
+
 app.use((req, res) => {
   res.status(404).json({ 
     error: 'Not Found',
@@ -44,7 +49,7 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
@@ -53,10 +58,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database and start server
+
 cloudDb.initialize()
   .then(() => {
-    // Only start server if not in test environment
+   
     if (process.env.NODE_ENV !== 'test') {
       app.listen(PORT, () => {
         console.log(`🚀 Company Logo API server running on port ${PORT}`);

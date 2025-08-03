@@ -5,9 +5,9 @@ class Company {
     this.domain = data.domain || '';
     this.logo_url = data.logo_url || null;
     this.imgbb_id = data.imgbb_id || null;
-    this.imgbb_url = data.imgbb_url || null; // Full ImgBB URL for direct access
+    this.imgbb_url = data.imgbb_url || null;
     this.imgbb_delete_url = data.imgbb_delete_url || null;
-    this.logo_data = data.logo_data || null; // For local storage fallback
+    this.logo_data = data.logo_data || null; 
     this.logo_format = data.logo_format || null;
     this.logo_size = data.logo_size || null;
     this.logo_width = data.logo_width || null;
@@ -17,7 +17,7 @@ class Company {
     this.created_at = data.created_at || null;
   }
 
-  // Validation methods
+ 
   isValid() {
     return this.validateName() && this.validateDomain();
   }
@@ -29,7 +29,7 @@ class Company {
   validateDomain() {
     if (!this.domain) return false;
     
-    // Basic domain validation
+   
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.([a-zA-Z]{2,})+$/;
     return domainRegex.test(this.domain.toLowerCase());
   }
@@ -55,7 +55,7 @@ class Company {
     return normalized;
   }
 
-  // Generate potential logo URLs based on domain
+  
   static generateLogoUrls(domain) {
     const normalizedDomain = this.normalizeDomain(domain);
     
@@ -75,7 +75,7 @@ class Company {
     ];
   }
 
-  // Convert to JSON (excluding binary data for API responses)
+ 
   toJSON(includeBinaryData = false) {
     const json = {
       id: this.id,
@@ -103,7 +103,7 @@ class Company {
     return json;
   }
 
-  // Create company from domain
+  
   static fromDomain(domain, name = null) {
     const normalizedDomain = this.normalizeDomain(domain);
     
@@ -113,19 +113,19 @@ class Company {
     });
   }
 
-  // Extract company name from domain
+  
   static extractCompanyNameFromDomain(domain) {
     const normalizedDomain = this.normalizeDomain(domain);
     const parts = normalizedDomain.split('.');
     
-    // Get the main part (before the TLD)
+    
     const mainPart = parts[0];
     
-    // Capitalize first letter
+   
     return mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
   }
 
-  // Get logo data URL for embedding
+ 
   getLogoDataUrl() {
     if (!this.logo_data || !this.logo_format) {
       return null;

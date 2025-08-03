@@ -6,44 +6,44 @@ class CloudStorageService {
   constructor() {
     this.imgbbApiKey = process.env.IMGBB_API_KEY;
     this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    this.supportedFormats = ['png', 'jpg', 'jpeg', 'gif', 'webp']; // ImgBB supported formats
-    this.convertFormats = ['ico', 'svg', 'bmp', 'tiff']; // Formats to convert to PNG
+    this.supportedFormats = ['png', 'jpg', 'jpeg', 'gif', 'webp']; 
+    this.convertFormats = ['ico', 'svg', 'bmp', 'tiff']; 
   }
 
-  // Convert unsupported formats to PNG
+  
   async convertToPNG(imageBuffer, originalFormat) {
     try {
       console.log(`🔄 Converting ${originalFormat} to PNG for ImgBB upload...`);
       
       if (originalFormat === 'ico') {
-        // Handle ICO files using icojs (dynamic import for ES module)
+       
         const { parseICO } = await import('icojs');
         const images = await parseICO(imageBuffer);
         if (images.length === 0) {
           throw new Error('No images found in ICO file');
         }
         
-        // Find the largest image in the ICO file
+       
         const largestImage = images.reduce((prev, current) => {
           return (current.width * current.height) > (prev.width * prev.height) ? current : prev;
         });
         
         console.log(`📐 Selected ICO image: ${largestImage.width}x${largestImage.height}`);
         
-        // Convert the selected image buffer to PNG using Sharp
+     
         return await sharp(Buffer.from(largestImage.buffer))
           .png()
           .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
           .toBuffer();
           
       } else if (originalFormat === 'svg') {
-        // For SVG, we need special handling
+      
         return await sharp(imageBuffer)
           .png()
           .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
           .toBuffer();
       } else {
-        // For BMP, TIFF, etc.
+     
         return await sharp(imageBuffer)
           .png()
           .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
@@ -55,12 +55,12 @@ class CloudStorageService {
     }
   }
 
-  // Check if format needs conversion for ImgBB
+  
   needsConversion(format) {
     return this.convertFormats.includes(format.toLowerCase());
   }
 
-  // Detect format from file extension
+ 
   detectFormatFromFilename(filename) {
     const ext = filename.split('.').pop().toLowerCase();
     const formatMap = {
@@ -79,17 +79,17 @@ class CloudStorageService {
     return formatMap[ext] || 'unknown';
   }
 
-  // Detect format from buffer magic bytes
+  
   detectFormatFromBuffer(buffer) {
     if (!buffer || buffer.length < 8) return null;
     
-    // Check magic bytes for common formats
+    
     const bytes = Array.from(buffer.slice(0, 8));
     
-    // PNG: 89 50 4E 47 0D 0A 1A 0A
+   
     if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return 'png';
     
-    // JPEG: FF D8 FF
+    
     if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return 'jpeg';
     
     // ICO: 00 00 01 00
@@ -115,20 +115,20 @@ class CloudStorageService {
     return null;
   }
 
-  // Upload image to ImgBB
+ 
   async uploadToImgBB(imageBuffer, filename) {
     if (!this.imgbbApiKey) {
       throw new Error('ImgBB API key not configured');
     }
 
     try {
-      // Detect format from filename or buffer
+     
       const originalFormat = this.detectFormatFromBuffer(imageBuffer) || this.detectFormatFromFilename(filename);
       let uploadBuffer = imageBuffer;
       let uploadFormat = originalFormat;
       let convertedFilename = filename;
 
-      // Convert unsupported formats to PNG
+      
       if (this.needsConversion(originalFormat)) {
         console.log(`📸 Converting ${originalFormat} to PNG for ImgBB compatibility...`);
         uploadBuffer = await this.convertToPNG(imageBuffer, originalFormat);
@@ -136,7 +136,7 @@ class CloudStorageService {
         convertedFilename = filename.replace(/\.[^.]+$/, '.png');
       }
 
-      // Validate the final image
+   
       this.validateImage(uploadBuffer);
 
       const formData = new FormData();
@@ -161,7 +161,7 @@ class CloudStorageService {
         
         console.log(`✅ ImgBB upload successful: ${imgbbData.url}`);
         
-        // Return upload data
+       
         return {
           original_url: imgbbData.url,
           imgbb_id: imgbbData.id,

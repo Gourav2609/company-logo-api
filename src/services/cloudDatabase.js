@@ -129,7 +129,7 @@ class CloudDatabaseService {
     await client.query(createLogoAttemptsTable);
     await client.query(createIndexes);
     
-    // Add missing columns if they don't exist (migration)
+   
     try {
       await client.query('ALTER TABLE companies ADD COLUMN IF NOT EXISTS imgbb_url TEXT');
       console.log('✅ Cloud database schema updated');
@@ -140,7 +140,7 @@ class CloudDatabaseService {
     console.log('✅ Cloud database tables initialized');
   }
 
-  // Company operations for cloud database
+ 
   async createCompany(companyData) {
     if (this.config.type === 'sqlite') {
       const { companyDb } = require('../database/database');
@@ -305,7 +305,7 @@ class CloudDatabaseService {
     };
   }
 
-  // Close connection
+
   async close() {
     if (this.pool) {
       await this.pool.end();
